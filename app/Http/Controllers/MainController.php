@@ -33,7 +33,7 @@ class MainController extends Controller
             'komo_username' => 'required|string|max:100',
             'shard_amount' => 'required|integer',
             'currency' => 'required|string',
-            'payment_channel' => 'required|in:paypal',
+            'payment_channel' => 'required|in:paypal,coinpayments',
             'tx_source' => 'required|string',
         ]);
         if ($validator->fails()) {
@@ -52,13 +52,34 @@ class MainController extends Controller
         // Payment Gateway
         switch ($req->payment_channel) {
             case 'paypal':
+                $pay_amount = $value_USD;
                 $data = [
-                    'price' => 90
+                    'pay_amount' => $pay_amount,
+                    'currency' => 'USD',
                 ];
                 $pg_response = (new PaypalController)->generatePaypalLink($data);
-                $pay_amount = $value_USD;
+                if (!($pg_response['status'] == 'CREATED')) {
+                    return response()->json($pg_response, 400);
+                }
                 $checkout_url = $pg_response['links'][1]['href'];
                 $checkout_type = 'redirect';
+                break;
+
+            case 'coinpayments':
+                $pay_amount = $value_USD + ($value_USD * (0.5 / 100));
+                $data = [
+                    'USD_amount' => $pay_amount,
+                    'crypto_target' => $req->currency,
+                    'komo_tx_id' => $this->KOMO_TX_ID,
+                    'komo_username' => 'aa',
+                    'email' => 'nikko@komodolegends.io',
+                ];
+                $pg_response = (new CoinpaymentsController)->createTransaction($data);
+                if (!($pg_response['error'] == 'ok')) {
+                    return response()->json($pg_response, 400);
+                }
+                $checkout_type = 'qrcode';
+                $checkout_url = $pg_response['result']['qrcode_url'];
                 break;
             
             default:
@@ -72,9 +93,9 @@ class MainController extends Controller
             'recipient' => $req->komo_username,
             'payment_for' => $req->shard_amount.' SHARD',
             'pay_amount' => $pay_amount.' '.$req->currency,
+            'payment_channel' => $req->payment_channel,
             'checkout_type' => $checkout_type,
             'checkout_url' => $checkout_url ?? null,
-            'qrcode_url' => $qrcode_url ?? null,
         ];
   
         // save tb_shard_tx
@@ -87,7 +108,7 @@ class MainController extends Controller
             'raw_komo_tx' => json_encode($response),
             'tx_status' => 'pending',
             'custom_param' => json_encode($pg_response),
-            'tx_source' => $req->header('X-Api-Key'),
+            'tx_source' => $req->tx_source,
         ];
         // PG_Model::insertData($db_data);
   

@@ -10,7 +10,8 @@ class PaypalController extends Controller
 {
     public function generatePaypalLink($req) {
         $rules = [
-            'price' => 'required|numeric',
+            'currency' => 'required|string',
+            'pay_amount' => 'required|numeric',
         ];
         $validator = Validator::make($req, $rules);
         if ($validator->fails()) {
@@ -28,8 +29,8 @@ class PaypalController extends Controller
             "purchase_units": [
               {
                 "amount": {
-                  "currency_code": "USD",
-                  "value": "'.$req->price.'"
+                  "currency_code": "'.$req->currency.'",
+                  "value": "'.round($req->pay_amount, 2, PHP_ROUND_HALF_UP).'"
                 }
               }
             ]
