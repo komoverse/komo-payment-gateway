@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Controllers\PaypalController;
 use Illuminate\Support\Facades\Validator;
+use App\Models\ShardTransactionModel;
 
 class MainController extends Controller
 {
@@ -30,7 +31,7 @@ class MainController extends Controller
 
     public function topupShard(Request $req) {
         $validator = Validator::make($req->all(), [
-            'komo_username' => 'required|string|max:100',
+            'userdata' => 'required|json',
             'shard_amount' => 'required|integer',
             'currency' => 'required|string',
             'payment_channel' => 'required|in:paypal,coinpayments',
@@ -43,6 +44,8 @@ class MainController extends Controller
             ];
             return response()->json($response, 400);
         }
+
+        $userdata = json_decode($req->userdata);
 
         // create exchange value
         $shard_amount = $req->shard_amount;
@@ -71,8 +74,8 @@ class MainController extends Controller
                     'USD_amount' => $pay_amount,
                     'crypto_target' => $req->currency,
                     'komo_tx_id' => $this->KOMO_TX_ID,
-                    'komo_username' => 'aa',
-                    'email' => 'nikko@komodolegends.io',
+                    'komo_username' => $userdata->komo_username,
+                    'email' => $userdata->email,
                 ];
                 $pg_response = (new CoinpaymentsController)->createTransaction($data);
                 if (!($pg_response['error'] == 'ok')) {
@@ -90,7 +93,7 @@ class MainController extends Controller
         // Prepare response
         $response = [
             'transaction_id' => $this->KOMO_TX_ID,
-            'recipient' => $req->komo_username,
+            'recipient' => $userdata->komo_username,
             'payment_for' => $req->shard_amount.' SHARD',
             'pay_amount' => $pay_amount.' '.$req->currency,
             'payment_channel' => $req->payment_channel,
@@ -101,16 +104,16 @@ class MainController extends Controller
         // save tb_shard_tx
         $db_data = [
             'komo_tx_id' => $this->KOMO_TX_ID,
-            'komo_username' => $req->komo_username,
+            'komo_username' => $userdata->komo_username,
             'description' => 'Topup '.$shard_amount.' SHARD via '.$req->payment_channel.' ('.$req->currency.')',
             'debit_credit' => 'debit',
             'amount_shard' => $shard_amount,
             'raw_komo_tx' => json_encode($response),
             'tx_status' => 'pending',
             'custom_param' => json_encode($pg_response),
-            'tx_source' => $req->tx_source,
+            'tx_source' => $req->header('X-Api-Key'),
         ];
-        // PG_Model::insertData($db_data);
+        ShardTransactionModel::insertData($db_data);
   
         // Send response
         return response()->json($response, 200);

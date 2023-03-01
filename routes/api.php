@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MainController;
+use App\Http\Controllers\PaypalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,5 +20,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::get('test', [MainController::class, 'test']);
-Route::post('shard/topup', [MainController::class, 'topupShard']);
+Route::middleware('apikey.check')->group(function(){
+    Route::get('test', [MainController::class, 'test']);
+    Route::post('shard/topup', [MainController::class, 'topupShard']);
+});
+
+Route::prefix('callback')->group(function(){
+    Route::post('paypal', [PaypalController::class, 'callback']);
+});
