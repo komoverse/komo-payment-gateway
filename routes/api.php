@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MainController;
 use App\Http\Controllers\PaypalController;
+use App\Http\Controllers\CoinpaymentsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,4 +28,5 @@ Route::middleware('apikey.check')->group(function(){
 
 Route::prefix('callback')->group(function(){
     Route::post('paypal', [PaypalController::class, 'callback']);
+    Route::post('coinpayments', [CoinpaymentsController::class, 'callback']);
 });

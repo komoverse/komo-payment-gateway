@@ -10,11 +10,13 @@ class CoinpaymentsController extends Controller
     protected $api_public_key;
     protected $api_private_key;
     protected $api_url;
+    protected $merchant_id;
 
     public function __construct() 
     {
         $this->api_public_key = config('coinpayments.api_public_key');
         $this->api_private_key = config('coinpayments.api_private_key');
+        $this->merchant_id = config('coinpayments.merchant_id');
         $this->api_url = "https://www.coinpayments.net/api.php";
     }
 
@@ -95,5 +97,23 @@ class CoinpaymentsController extends Controller
 
         $coinpaymentdata = $this->CoinPaymentAPI('create_transaction', $cp_request);
         return $coinpaymentdata;
+    }
+
+    public function callback(Request $req) {
+        if (ShardTransactionModel::submitCallback($req->post(), 'coinpayments')) {
+
+            if (($cb_payload->merchant == $this->merchant_id) && ($cb_payload->status_text == 'Complete')) {
+                // update shard data
+                $txdata = ShardTransactionModel::getFromKOMOTXID($cb_payload->txn_id);
+                $data = [
+                    'komo_tx_id' => $txdata->komo_tx_id,
+                    'tx_status' => 'success',
+                ];
+                if (ShardTransactionModel::updateShardTX((object) $data)) {
+                    ShardTransactionModel::addAccountShard($txdata->komo_username, $txdata->amount_shard);
+                }
+            }
+            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
+        }
     }
 }

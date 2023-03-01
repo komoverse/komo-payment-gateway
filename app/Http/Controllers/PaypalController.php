@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
 use Illuminate\Support\Facades\Validator;
+use App\Models\ShardTransactionModel;
 
 class PaypalController extends Controller
 {
@@ -38,5 +39,11 @@ class PaypalController extends Controller
         $paypal = $provider->createOrder($data);
 
         return $paypal;
+    }
+
+    public function callback(Request $req) {
+        if (ShardTransactionModel::submitCallback($req->post(), 'paypal')) {
+            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
+        }
     }
 }
