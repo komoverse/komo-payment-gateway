@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\PaypalController;
+use App\Http\Controllers\DuitkuController;
+use App\Http\Controllers\CoinpaymentsController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\ShardTransactionModel;
 
@@ -16,32 +18,28 @@ class MainController extends Controller
     }
 
     /* ----- API FUNCTIONS ----- */
-    public function test() {
-        $data = [
-            'price' => 90
-        ];
-        return response()->json((new PaypalController)->generatePaypalLink($data), 200);
-    }
-
     public function topupShard(Request $request) {
+        // Validate data.
         $validator = Validator::make($request->all(), [
             'userdata' => 'required|json',
             'shard_amount' => 'required|integer',
             'currency' => 'required|string',
-            'payment_channel' => 'required|in:paypal,coinpayments',
+            'payment_channel' => 'required|in:paypal,coinpayments,duitku',
             'tx_source' => 'required|string',
         ]);
+
         if ($validator->fails()) {
             $response = [
                 'status' => 'error',
                 'message' => $validator->messages(),
             ];
-            return response()->json($response, 400);
+            return response()->json($response, 400); // Bad Request
         }
 
+        // Initialize userdata.
         $userdata = json_decode($request->userdata);
 
-        // create exchange value
+        // Create exchange value.
         $shard_amount = $request->shard_amount;
         $value_IDR = $shard_amount;
         $value_USD = $value_IDR * $this->getConversionRate('USD');
@@ -79,12 +77,15 @@ class MainController extends Controller
                 $checkout_url = $pg_response['result']['qrcode_url'];
                 break;
 
+            case 'duitku':
+                $pg_response = (new DuitkuController)->create_payment_gateway("something");
+                break;
             default:
                 # code...
                 break;
         }
 
-        // Prepare response
+        // Prepare response to return.
         $response = [
             'transaction_id' => $this->KOMO_TX_ID,
             'recipient' => $userdata->komo_username,
@@ -95,7 +96,7 @@ class MainController extends Controller
             'checkout_url' => $checkout_url ?? null,
         ];
 
-        // save tb_shard_tx
+        // Save ShardTransaction into tb_shard_tx table.
         $db_data = [
             'komo_tx_id' => $this->KOMO_TX_ID,
             'komo_username' => $userdata->komo_username,
@@ -109,8 +110,15 @@ class MainController extends Controller
         ];
         ShardTransactionModel::insertData($db_data);
 
-        // Send response
+        // Return response.
         return response()->json($response, 200);
+    }
+
+    public function test() {
+        $data = [
+            'price' => 90
+        ];
+        return response()->json((new PaypalController)->generatePaypalLink($data), 200);
     }
 
     /* ----- HELPER FUNCTIONS ----- */
