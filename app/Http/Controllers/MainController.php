@@ -15,6 +15,7 @@ class MainController extends Controller
         $this->KOMO_TX_ID = strtoupper(md5(uniqid()));
     }
 
+    /* ----- API FUNCTIONS ----- */
     public function test() {
         $data = [
             'price' => 90
@@ -22,15 +23,8 @@ class MainController extends Controller
         return response()->json((new PaypalController)->generatePaypalLink($data), 200);
     }
 
-
-    public function getConversionRate($to, $from = 'IDR') {
-        $price = file_get_contents("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=".strtoupper($from)."&tsyms=".strtoupper($to));
-        $price = json_decode($price);
-        return $price->RAW->$from->$to->PRICE;
-    }
-
-    public function topupShard(Request $req) {
-        $validator = Validator::make($req->all(), [
+    public function topupShard(Request $request) {
+        $validator = Validator::make($request->all(), [
             'userdata' => 'required|json',
             'shard_amount' => 'required|integer',
             'currency' => 'required|string',
@@ -45,15 +39,15 @@ class MainController extends Controller
             return response()->json($response, 400);
         }
 
-        $userdata = json_decode($req->userdata);
+        $userdata = json_decode($request->userdata);
 
         // create exchange value
-        $shard_amount = $req->shard_amount;
+        $shard_amount = $request->shard_amount;
         $value_IDR = $shard_amount;
         $value_USD = $value_IDR * $this->getConversionRate('USD');
 
         // Payment Gateway
-        switch ($req->payment_channel) {
+        switch ($request->payment_channel) {
             case 'paypal':
                 $pay_amount = $value_USD;
                 $data = [
@@ -72,7 +66,7 @@ class MainController extends Controller
                 $pay_amount = $value_USD + ($value_USD * (0.5 / 100));
                 $data = [
                     'USD_amount' => $pay_amount,
-                    'crypto_target' => $req->currency,
+                    'crypto_target' => $request->currency,
                     'komo_tx_id' => $this->KOMO_TX_ID,
                     'komo_username' => $userdata->komo_username,
                     'email' => $userdata->email,
@@ -84,7 +78,7 @@ class MainController extends Controller
                 $checkout_type = 'qrcode';
                 $checkout_url = $pg_response['result']['qrcode_url'];
                 break;
-            
+
             default:
                 # code...
                 break;
@@ -94,28 +88,36 @@ class MainController extends Controller
         $response = [
             'transaction_id' => $this->KOMO_TX_ID,
             'recipient' => $userdata->komo_username,
-            'payment_for' => $req->shard_amount.' SHARD',
-            'pay_amount' => $pay_amount.' '.$req->currency,
-            'payment_channel' => $req->payment_channel,
+            'payment_for' => $request->shard_amount.' SHARD',
+            'pay_amount' => $pay_amount.' '.$request->currency,
+            'payment_channel' => $request->payment_channel,
             'checkout_type' => $checkout_type,
             'checkout_url' => $checkout_url ?? null,
         ];
-  
+
         // save tb_shard_tx
         $db_data = [
             'komo_tx_id' => $this->KOMO_TX_ID,
             'komo_username' => $userdata->komo_username,
-            'description' => 'Topup '.$shard_amount.' SHARD via '.$req->payment_channel.' ('.$req->currency.')',
+            'description' => 'Topup '.$shard_amount.' SHARD via '.$request->payment_channel.' ('.$request->currency.')',
             'debit_credit' => 'debit',
             'amount_shard' => $shard_amount,
             'raw_komo_tx' => json_encode($response),
             'tx_status' => 'pending',
             'custom_param' => json_encode($pg_response),
-            'tx_source' => $req->header('X-Api-Key'),
+            'tx_source' => $request->header('X-Api-Key'),
         ];
         ShardTransactionModel::insertData($db_data);
-  
+
         // Send response
         return response()->json($response, 200);
     }
+
+    /* ----- HELPER FUNCTIONS ----- */
+    public function getConversionRate($to, $from = 'IDR') {
+        $price = file_get_contents("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=".strtoupper($from)."&tsyms=".strtoupper($to));
+        $price = json_decode($price);
+        return $price->RAW->$from->$to->PRICE;
+    }
+
 }

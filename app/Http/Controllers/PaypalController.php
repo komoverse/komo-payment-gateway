@@ -9,18 +9,26 @@ use App\Models\ShardTransactionModel;
 
 class PaypalController extends Controller
 {
-    public function generatePaypalLink($req) {
+    /* ----- API FUNCTIONS ----- */
+    public function callback(Request $request) {
+        if (ShardTransactionModel::submitCallback($request->post(), 'paypal')) {
+            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
+        }
+    }
+
+    /* ----- HELPER FUNCTIONS ----- */
+    public function generatePaypalLink($request) {
         $rules = [
             'currency' => 'required|string',
             'pay_amount' => 'required|numeric',
         ];
-        $validator = Validator::make($req, $rules);
+
+        $validator = Validator::make($request, $rules);
         if ($validator->fails()) {
             return $validator->errors();
         } else {
-            $req = (object) $req;
+            $request = (object) $request;
         }
-
 
         $provider = new PayPalClient;
         $provider->getAccessToken();
@@ -30,8 +38,8 @@ class PaypalController extends Controller
             "purchase_units": [
               {
                 "amount": {
-                  "currency_code": "'.$req->currency.'",
-                  "value": "'.round($req->pay_amount, 2, PHP_ROUND_HALF_UP).'"
+                  "currency_code": "'.$request->currency.'",
+                  "value": "'.round($request->pay_amount, 2, PHP_ROUND_HALF_UP).'"
                 }
               }
             ]
@@ -39,11 +47,5 @@ class PaypalController extends Controller
         $paypal = $provider->createOrder($data);
 
         return $paypal;
-    }
-
-    public function callback(Request $req) {
-        if (ShardTransactionModel::submitCallback($req->post(), 'paypal')) {
-            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
-        }
     }
 }

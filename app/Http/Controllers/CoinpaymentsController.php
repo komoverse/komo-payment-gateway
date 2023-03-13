@@ -12,7 +12,7 @@ class CoinpaymentsController extends Controller
     protected $api_url;
     protected $merchant_id;
 
-    public function __construct() 
+    public function __construct()
     {
         $this->api_public_key = config('coinpayments.api_public_key');
         $this->api_private_key = config('coinpayments.api_private_key');
@@ -20,6 +20,26 @@ class CoinpaymentsController extends Controller
         $this->api_url = "https://www.coinpayments.net/api.php";
     }
 
+    /* ----- API FUNCTIONS ----- */
+    public function callback(Request $req) {
+        if (ShardTransactionModel::submitCallback($req->post(), 'coinpayments')) {
+
+            if (($cb_payload->merchant == $this->merchant_id) && ($cb_payload->status_text == 'Complete')) {
+                // update shard data
+                $txdata = ShardTransactionModel::getFromKOMOTXID($cb_payload->txn_id);
+                $data = [
+                    'komo_tx_id' => $txdata->komo_tx_id,
+                    'tx_status' => 'success',
+                ];
+                if (ShardTransactionModel::updateShardTX((object) $data)) {
+                    ShardTransactionModel::addAccountShard($txdata->komo_username, $txdata->amount_shard);
+                }
+            }
+            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
+        }
+    }
+
+    /* ----- HELPER FUNCTIONS ----- */
     function CoinPaymentAPI($cmd, $req = array()) {
         // Fill these in from your API Keys page
         $public_key = $this->api_public_key;
@@ -78,7 +98,7 @@ class CoinpaymentsController extends Controller
             'crypto_target' => 'required|string|max:6',
             'komo_username' => 'required|string',
             'email' => 'required|email',
-            'komo_tx_id' => 'required|string|size:32', 
+            'komo_tx_id' => 'required|string|size:32',
         ];
         $validator = Validator::make($req, $rules);
         if ($validator->fails()) {
@@ -97,23 +117,5 @@ class CoinpaymentsController extends Controller
 
         $coinpaymentdata = $this->CoinPaymentAPI('create_transaction', $cp_request);
         return $coinpaymentdata;
-    }
-
-    public function callback(Request $req) {
-        if (ShardTransactionModel::submitCallback($req->post(), 'coinpayments')) {
-
-            if (($cb_payload->merchant == $this->merchant_id) && ($cb_payload->status_text == 'Complete')) {
-                // update shard data
-                $txdata = ShardTransactionModel::getFromKOMOTXID($cb_payload->txn_id);
-                $data = [
-                    'komo_tx_id' => $txdata->komo_tx_id,
-                    'tx_status' => 'success',
-                ];
-                if (ShardTransactionModel::updateShardTX((object) $data)) {
-                    ShardTransactionModel::addAccountShard($txdata->komo_username, $txdata->amount_shard);
-                }
-            }
-            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
-        }
     }
 }
