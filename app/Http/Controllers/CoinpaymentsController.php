@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 
-class CoinpaymentsController extends Controller
+class CoinPaymentsController extends Controller
 {
     protected $api_public_key;
     protected $api_private_key;

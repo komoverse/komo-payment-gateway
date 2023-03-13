@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Controllers\PaypalController;
 use App\Http\Controllers\DuitkuController;
-use App\Http\Controllers\CoinpaymentsController;
+use App\Http\Controllers\CoinPaymentsController;
 use Illuminate\Support\Facades\Validator;
 use App\Models\ShardTransactionModel;
 
@@ -69,7 +69,7 @@ class MainController extends Controller
                     'komo_username' => $userdata->komo_username,
                     'email' => $userdata->email,
                 ];
-                $pg_response = (new CoinpaymentsController)->createTransaction($data);
+                $pg_response = (new CoinPaymentsController)->createTransaction($data);
                 if (!($pg_response['error'] == 'ok')) {
                     return response()->json($pg_response, 400);
                 }
