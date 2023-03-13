@@ -10,16 +10,16 @@ class DuitkuController extends Controller
     private $api_key;
 
     public function __construct(){
-        if (config('duitku.mode') == 'development') {
-            $this->merchant_code = config('duitku.dev_merchant_code');
-            $this->api_key = config('duitku.dev_api_key');
+        if (config('duitku.mode') == 'sandbox') {
+            $this->merchant_code = config('duitku.sandbox_merchant_code');
+            $this->api_key = config('duitku.sandbox_api_key');
             $this->get_payment_method_url = 'https://sandbox.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
             $this->request_transaction_url = 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry';
         }
 
-        if (config('duitku.mode') == 'production'){
-            $this->merchant_code = config('duitku.prod_merchant_code');
-            $this->api_key = config('duitku.prod_api_key');
+        if (config('duitku.mode') == 'live'){
+            $this->merchant_code = config('duitku.live_merchant_code');
+            $this->api_key = config('duitku.live_api_key');
             $this->get_payment_method_url = 'https://passport.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
             $this->request_transaction_url = 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry';
         }
@@ -31,9 +31,9 @@ class DuitkuController extends Controller
         // Request HTTP Transaksi
         // https://docs.duitku.com/api/id/#request-http-transaksi
 
-        $merchantCode = 'DXXXXX'; // dari duitku
-        $apiKey = 'XXXXXXXXXX7968XXXXXXXXXFB05332AF'; // dari duitku
-        $paymentAmount = 40000;
+        $merchantCode = $this->merchant_code; // dari duitku
+        $apiKey = $this->api_key; // dari duitku
+        $paymentAmount = $data['pay_amount'];
         $paymentMethod = 'VC'; // VC = Credit Card
         $merchantOrderId = time() . ''; // dari merchant, unik
         $productDetails = 'Tes pembayaran menggunakan Duitku';
@@ -46,6 +46,7 @@ class DuitkuController extends Controller
         $returnUrl = 'http://example.com/return'; // url untuk redirect
         $expiryPeriod = 10; // atur waktu kadaluarsa dalam hitungan menit
         $signature = md5($merchantCode . $merchantOrderId . $paymentAmount . $apiKey);
+
 
         // Customer Detail
         $firstName = "John";
@@ -76,18 +77,13 @@ class DuitkuController extends Controller
             'shippingAddress' => $address
         );
 
-        $item1 = array(
-            'name' => 'Test Item 1',
-            'price' => 10000,
-            'quantity' => 1);
-
-        $item2 = array(
-            'name' => 'Test Item 2',
-            'price' => 30000,
-            'quantity' => 3);
+        $shards = array(
+            'name' => 'SHARD(s)',
+            'price' => 15000,
+            'quantity' => $data['pay_amount']);
 
         $itemDetails = array(
-            $item1, $item2
+            $shards
         );
 
         /*Khusus untuk metode pembayaran OL dan SL
@@ -137,10 +133,9 @@ class DuitkuController extends Controller
             'expiryPeriod' => $expiryPeriod
         );
 
+        // Send a cURL request.
         $params_string = json_encode($params);
-        //echo $params_string;
-        $url = 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry'; // Sandbox
-        // $url = 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry'; // Production
+        $url = $this->request_transaction_url;
         $ch = curl_init();
 
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -153,13 +148,14 @@ class DuitkuController extends Controller
         );
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-        //execute post
+        // Execute post.
         $request = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         if($httpCode == 200)
         {
             $result = json_decode($request, true);
+            dd($result, "This works, but sandbox doesn't include result[vaNumber] array. Try the live version.");
             //header('location: '. $result['paymentUrl']);
             echo "paymentUrl :". $result['paymentUrl'] . "<br />";
             echo "merchantCode :". $result['merchantCode'] . "<br />";
@@ -185,7 +181,7 @@ class DuitkuController extends Controller
         $merchantCode = $this->merchant_code;
         $apiKey = $this->api_key;
         $datetime = date('Y-m-d H:i:s');
-        $paymentAmount = $data['paymentAmount'];
+        $paymentAmount = $data['pay_amount'];
         $signature = hash('sha256',$merchantCode . $paymentAmount . $datetime . $apiKey);
 
         $params = array(

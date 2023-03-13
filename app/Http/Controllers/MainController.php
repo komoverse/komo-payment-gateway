@@ -80,9 +80,10 @@ class MainController extends Controller
             case 'duitku':
                 $pay_amount = $value_IDR;
                 $data = [
-                    'paymentAmount' => $pay_amount,
+                    'pay_amount' => $pay_amount,
                 ];
-                $pg_response = (new DuitkuController)->getPaymentMethod($data);
+                $pg_response = (new DuitkuController)->requestTransaction($data);
+                $checkout_type = '[DUITKU PLACEHOLDER]';
                 break;
             default:
                 # code...

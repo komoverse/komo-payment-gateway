@@ -4,11 +4,11 @@
  */
 
 return [
-    'mode'           => env('DUITKU_MODE', 'development'),
+    'mode'                  => env('DUITKU_MODE', 'sandbox'),
 
-    'dev_merchant_code'     => env('DUITKU_SANDBOX_MERCHANT_CODE', ''),
-    'dev_api_key'           => env('DUITKU_SANDBOX_API_KEY', ''),
+    'sandbox_merchant_code'     => env('DUITKU_SANDBOX_MERCHANT_CODE', ''),
+    'sandbox_api_key'           => env('DUITKU_SANDBOX_API_KEY', ''),
 
-    'prod_merchant_code'     => env('DUITKU_LIVE_MERCHANT_CODE', ''),
-    'prod_api_key'           => env('DUITKU_LIVE_API_KEY', ''),
+    'live_merchant_code'    => env('DUITKU_LIVE_MERCHANT_CODE', ''),
+    'live_api_key'          => env('DUITKU_LIVE_API_KEY', ''),
 ];
