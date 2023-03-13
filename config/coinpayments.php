@@ -1,4 +1,7 @@
 <?php
+/**
+ * CoinPayments Setting & API Credentials
+ */
 
 return [
     'api_public_key' => env('COINPAYMENTS_PUBLIC_KEY', false),

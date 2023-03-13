@@ -10,20 +10,173 @@ class DuitkuController extends Controller
     private $api_key;
 
     public function __construct(){
-        if (env('DUITKU_MODE') == 'development'){
-            $this->merchant_code = env('DUITKU_SANDBOX_MERCHANT_CODE', null);
-            $this->api_key = env('DUITKU_SANDBOX_API_KEY', null);
+        if (config('duitku.mode') == 'development') {
+            $this->merchant_code = config('duitku.dev_merchant_code');
+            $this->api_key = config('duitku.dev_api_key');
             $this->get_payment_method_url = 'https://sandbox.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
+            $this->request_transaction_url = 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry';
         }
 
-        if (env('DUITKU_MODE') == 'production'){
-            $this->merchant_code = env('DUITKU_PRODUCTION_MERCHANT_CODE', null);
-            $this->api_key = env('DUITKU_PRODUCTION_API_KEY', null);
+        if (config('duitku.mode') == 'production'){
+            $this->merchant_code = config('duitku.prod_merchant_code');
+            $this->api_key = config('duitku.prod_api_key');
             $this->get_payment_method_url = 'https://passport.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
+            $this->request_transaction_url = 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry';
         }
+
     }
 
     /* ----- API FUNCTIONS ----- */
+    public function requestTransaction($data){
+        // Request HTTP Transaksi
+        // https://docs.duitku.com/api/id/#request-http-transaksi
+
+        $merchantCode = 'DXXXXX'; // dari duitku
+        $apiKey = 'XXXXXXXXXX7968XXXXXXXXXFB05332AF'; // dari duitku
+        $paymentAmount = 40000;
+        $paymentMethod = 'VC'; // VC = Credit Card
+        $merchantOrderId = time() . ''; // dari merchant, unik
+        $productDetails = 'Tes pembayaran menggunakan Duitku';
+        $email = 'test@test.com'; // email pelanggan anda
+        $phoneNumber = '08123456789'; // nomor telepon pelanggan anda (opsional)
+        $additionalParam = ''; // opsional
+        $merchantUserInfo = ''; // opsional
+        $customerVaName = 'John Doe'; // tampilan nama pada tampilan konfirmasi bank
+        $callbackUrl = 'http://example.com/callback'; // url untuk callback
+        $returnUrl = 'http://example.com/return'; // url untuk redirect
+        $expiryPeriod = 10; // atur waktu kadaluarsa dalam hitungan menit
+        $signature = md5($merchantCode . $merchantOrderId . $paymentAmount . $apiKey);
+
+        // Customer Detail
+        $firstName = "John";
+        $lastName = "Doe";
+
+        // Address
+        $alamat = "Jl. Kembangan Raya";
+        $city = "Jakarta";
+        $postalCode = "11530";
+        $countryCode = "ID";
+
+        $address = array(
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'address' => $alamat,
+            'city' => $city,
+            'postalCode' => $postalCode,
+            'phone' => $phoneNumber,
+            'countryCode' => $countryCode
+        );
+
+        $customerDetail = array(
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'email' => $email,
+            'phoneNumber' => $phoneNumber,
+            'billingAddress' => $address,
+            'shippingAddress' => $address
+        );
+
+        $item1 = array(
+            'name' => 'Test Item 1',
+            'price' => 10000,
+            'quantity' => 1);
+
+        $item2 = array(
+            'name' => 'Test Item 2',
+            'price' => 30000,
+            'quantity' => 3);
+
+        $itemDetails = array(
+            $item1, $item2
+        );
+
+        /*Khusus untuk metode pembayaran OL dan SL
+        $accountLink = array (
+            'credentialCode' => '7cXXXXX-XXXX-XXXX-9XXX-944XXXXXXX8',
+            'ovo' => array (
+                'paymentDetails' => array (
+                    0 => array (
+                        'paymentType' => 'CASH',
+                        'amount' => 40000,
+                    ),
+                ),
+            ),
+            'shopee' => array (
+                'useCoin' => false,
+                'promoId' => '',
+            ),
+        );*/
+
+        /*Khusus untuk metode pembayaran Kartu Kredit
+        $creditCardDetail = array (
+            'acquirer' => '014',
+            'binWhitelist' => array (
+                '014',
+                '400000'
+            )
+        );*/
+
+        $params = array(
+            'merchantCode' => $merchantCode,
+            'paymentAmount' => $paymentAmount,
+            'paymentMethod' => $paymentMethod,
+            'merchantOrderId' => $merchantOrderId,
+            'productDetails' => $productDetails,
+            'additionalParam' => $additionalParam,
+            'merchantUserInfo' => $merchantUserInfo,
+            'customerVaName' => $customerVaName,
+            'email' => $email,
+            'phoneNumber' => $phoneNumber,
+            //'accountLink' => $accountLink,
+            //'creditCardDetail' => $creditCardDetail,
+            'itemDetails' => $itemDetails,
+            'customerDetail' => $customerDetail,
+            'callbackUrl' => $callbackUrl,
+            'returnUrl' => $returnUrl,
+            'signature' => $signature,
+            'expiryPeriod' => $expiryPeriod
+        );
+
+        $params_string = json_encode($params);
+        //echo $params_string;
+        $url = 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry'; // Sandbox
+        // $url = 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry'; // Production
+        $ch = curl_init();
+
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $params_string);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Content-Type: application/json',
+            'Content-Length: ' . strlen($params_string))
+        );
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+
+        //execute post
+        $request = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if($httpCode == 200)
+        {
+            $result = json_decode($request, true);
+            //header('location: '. $result['paymentUrl']);
+            echo "paymentUrl :". $result['paymentUrl'] . "<br />";
+            echo "merchantCode :". $result['merchantCode'] . "<br />";
+            echo "reference :". $result['reference'] . "<br />";
+            echo "vaNumber :". $result['vaNumber'] . "<br />";
+            echo "amount :". $result['amount'] . "<br />";
+            echo "statusCode :". $result['statusCode'] . "<br />";
+            echo "statusMessage :". $result['statusMessage'] . "<br />";
+        }
+        else
+        {
+            $request = json_decode($request);
+            $error_message = "Server Error " . $httpCode ." ". $request->Message;
+            echo $error_message;
+        }
+    }
+
     public function getPaymentMethod($data){
         // Request HTTP Get Payment Method
         // https://docs.duitku.com/api/id/#request-http-get-payment-method
