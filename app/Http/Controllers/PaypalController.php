@@ -9,14 +9,12 @@ use App\Models\ShardTransactionModel;
 
 class PaypalController extends Controller
 {
-    /* ----- API FUNCTIONS ----- */
     public function callback(Request $request) {
         if (ShardTransactionModel::submitCallback($request->post(), 'paypal')) {
             return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
         }
     }
 
-    /* ----- HELPER FUNCTIONS ----- */
     public function generatePaypalLink($request) {
         $rules = [
             'currency' => 'required|string',

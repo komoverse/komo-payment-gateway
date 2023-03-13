@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\MainController;
+use App\Http\Controllers\DuitkuController;
 use App\Http\Controllers\PaypalController;
 use App\Http\Controllers\CoinPaymentsController;
 
@@ -29,4 +30,5 @@ Route::middleware('apikey.check')->group(function(){
 Route::prefix('callback')->group(function(){
     Route::post('paypal', [PaypalController::class, 'callback']);
     Route::post('coinpayments', [CoinPaymentsController::class, 'callback']);
+    Route::post('duitku', [DuitkuController::class, 'callback'])
 });

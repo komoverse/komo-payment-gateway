@@ -17,7 +17,6 @@ class MainController extends Controller
         $this->KOMO_TX_ID = strtoupper(md5(uniqid()));
     }
 
-    /* ----- API FUNCTIONS ----- */
     public function topupShard(Request $request) {
         // Validate data.
         $validator = Validator::make($request->all(), [
@@ -126,7 +125,6 @@ class MainController extends Controller
         return response()->json((new PaypalController)->generatePaypalLink($data), 200);
     }
 
-    /* ----- HELPER FUNCTIONS ----- */
     public function getConversionRate($to, $from = 'IDR') {
         $price = file_get_contents("https://min-api.cryptocompare.com/data/pricemultifull?fsyms=".strtoupper($from)."&tsyms=".strtoupper($to));
         $price = json_decode($price);

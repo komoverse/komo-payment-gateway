@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\ShardTransactionModel;
 
 class DuitkuController extends Controller
 {
@@ -23,10 +24,14 @@ class DuitkuController extends Controller
             $this->get_payment_method_url = 'https://passport.duitku.com/webapi/api/merchant/paymentmethod/getpaymentmethod';
             $this->request_transaction_url = 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry';
         }
-
     }
 
-    /* ----- API FUNCTIONS ----- */
+    public function callback(Request $request) {
+        if (ShardTransactionModel::submitCallback($request->post(), 'duitku')) {
+            return response()->json('Callback received '.date('Y-m-d H:i:s'), 200);
+        }
+    }
+
     public function requestTransaction($data){
         // Request HTTP Transaksi
         // https://docs.duitku.com/api/id/#request-http-transaksi

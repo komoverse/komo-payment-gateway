@@ -10,16 +10,16 @@ class ShardTransactionModel extends Model
 {
     use HasFactory;
 
-    static function insertData($req) {
+    static function insertData($request) {
         $insert = DB::table('tb_shard_tx')
-                    ->insert($req);
+                    ->insert($request);
         return $insert;
     }
 
-    static function submitCallback($req, $source) {
+    static function submitCallback($request, $source) {
         $insert = DB::table('tb_pg_callback')
                     ->insert([
-                        'payload' => json_encode($req),
+                        'payload' => json_encode($request),
                         'source' => $source,
                     ]);
         return $insert;

@@ -20,7 +20,6 @@ class CoinPaymentsController extends Controller
         $this->api_url = "https://www.coinpayments.net/api.php";
     }
 
-    /* ----- API FUNCTIONS ----- */
     public function callback(Request $request) {
         if (ShardTransactionModel::submitCallback($request->post(), 'coinpayments')) {
 
@@ -39,7 +38,6 @@ class CoinPaymentsController extends Controller
         }
     }
 
-    /* ----- HELPER FUNCTIONS ----- */
     function CoinPaymentAPI($cmd, $request = array()) {
         // Fill these in from your API Keys page
         $public_key = $this->api_public_key;
