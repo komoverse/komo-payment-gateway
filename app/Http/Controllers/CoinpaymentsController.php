@@ -21,8 +21,8 @@ class CoinPaymentsController extends Controller
     }
 
     /* ----- API FUNCTIONS ----- */
-    public function callback(Request $req) {
-        if (ShardTransactionModel::submitCallback($req->post(), 'coinpayments')) {
+    public function callback(Request $request) {
+        if (ShardTransactionModel::submitCallback($request->post(), 'coinpayments')) {
 
             if (($cb_payload->merchant == $this->merchant_id) && ($cb_payload->status_text == 'Complete')) {
                 // update shard data
@@ -40,19 +40,19 @@ class CoinPaymentsController extends Controller
     }
 
     /* ----- HELPER FUNCTIONS ----- */
-    function CoinPaymentAPI($cmd, $req = array()) {
+    function CoinPaymentAPI($cmd, $request = array()) {
         // Fill these in from your API Keys page
         $public_key = $this->api_public_key;
         $private_key = $this->api_private_key;
 
         // Set the API command and required fields
-        $req['version'] = 1;
-        $req['cmd'] = $cmd;
-        $req['key'] = $public_key;
-        $req['format'] = 'json'; //supported values are json and xml
+        $request['version'] = 1;
+        $request['cmd'] = $cmd;
+        $request['key'] = $public_key;
+        $request['format'] = 'json'; //supported values are json and xml
 
         // Generate the query string
-        $post_data = http_build_query($req, '', '&');
+        $post_data = http_build_query($request, '', '&');
 
         // Calculate the HMAC signature on the POST data
         $hmac = hash_hmac('sha512', $post_data, $private_key);
@@ -92,7 +92,7 @@ class CoinPaymentsController extends Controller
         print_r($this->CoinPaymentAPI('rates'));
     }
 
-    function createTransaction($req) {
+    function createTransaction($request) {
         $rules = [
             'USD_amount' => 'required|numeric',
             'crypto_target' => 'required|string|max:6',
@@ -100,20 +100,20 @@ class CoinPaymentsController extends Controller
             'email' => 'required|email',
             'komo_tx_id' => 'required|string|size:32',
         ];
-        $validator = Validator::make($req, $rules);
+        $validator = Validator::make($request, $rules);
         if ($validator->fails()) {
             return $validator->errors();
         } else {
-            $req = (object) $req;
+            $request = (object) $request;
         }
 
         $cp_request['cmd'] = 'create_transaction';
-        $cp_request['amount'] = $req->USD_amount; // USD
+        $cp_request['amount'] = $request->USD_amount; // USD
         $cp_request['currency1'] = 'USD';
-        $cp_request['currency2'] = $req->crypto_target;
-        $cp_request['buyer_email'] = $req->email;
-        $cp_request['buyer_name'] = $req->komo_username;
-        $cp_request['invoice'] = $req->komo_tx_id;
+        $cp_request['currency2'] = $request->crypto_target;
+        $cp_request['buyer_email'] = $request->email;
+        $cp_request['buyer_name'] = $request->komo_username;
+        $cp_request['invoice'] = $request->komo_tx_id;
 
         $coinpaymentdata = $this->CoinPaymentAPI('create_transaction', $cp_request);
         return $coinpaymentdata;

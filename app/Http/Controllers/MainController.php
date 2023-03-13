@@ -78,7 +78,11 @@ class MainController extends Controller
                 break;
 
             case 'duitku':
-                $pg_response = (new DuitkuController)->create_payment_gateway("something");
+                $pay_amount = $value_IDR;
+                $data = [
+                    'paymentAmount' => $pay_amount,
+                ];
+                $pg_response = (new DuitkuController)->getPaymentMethod($data);
                 break;
             default:
                 # code...
